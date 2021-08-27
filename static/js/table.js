@@ -39,10 +39,10 @@ var CompletedTasksDatatable = function () {
             columnDefs: [
                 {
                     targets: 0,
-                    title: "Task Name",
-                    className: "task_label",
-                    name: "task_label",
-                    data: "task_label",
+                    title: "New File Name",
+                    className: "basename",
+                    name: "basename",
+                    data: "basename",
                 },
                 {
                     targets: 1,

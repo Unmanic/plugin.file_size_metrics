@@ -1,4 +1,4 @@
-var CompletedTasksFileSizeDiffChart = function () {
+const CompletedTasksFileSizeDiffChart = function () {
 
     /**
      * Format a byte integer into the smallest possible number appending a suffix
@@ -7,24 +7,24 @@ var CompletedTasksFileSizeDiffChart = function () {
      * @param decimals
      * @returns {string}
      */
-    var formatBytes = function (bytes, decimals) {
+    const formatBytes = function (bytes, decimals) {
         decimals = (typeof decimals !== 'undefined') ? decimals : 2;
         if (bytes === 0) return '0 Bytes';
-        var k = 1024;
-        var dm = decimals < 0 ? 0 : decimals;
-        var sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-        var i = Math.floor(Math.log(bytes) / Math.log(k));
+        let k = 1024;
+        let dm = decimals < 0 ? 0 : decimals;
+        let sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+        let i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
     };
 
-    var positive = '#009fdd';
-    var negative = '#C10015';
+    let positive = '#009fdd';
+    let negative = '#C10015';
 
-    var chart_title = '(Select a task from the table below)';
-    var source_file_size = 0;
-    var destination_file_size = 0;
-    var source_total_size = 0;
-    var destination_total_size = 0;
+    let chart_title = '(Select a task from the table below)';
+    let source_file_size = 0;
+    let destination_file_size = 0;
+    let source_total_size = 0;
+    let destination_total_size = 0;
 
     const individualChart = Highcharts.chart('file_size_chart', {
         title: {
@@ -55,11 +55,11 @@ var CompletedTasksFileSizeDiffChart = function () {
     });
 
 
-    var updateIndividualChart = function () {
+    const updateIndividualChart = function () {
         // If the destination file size is greater than the source, then mark it negative, otherwise positive
-        var reduced = true;
-        var destination_bar_colour = positive;
-        var percent_changed = 100 - (destination_file_size / source_file_size * 100);
+        let reduced = true;
+        let destination_bar_colour = positive;
+        let percent_changed = 100 - (destination_file_size / source_file_size * 100);
         if (destination_file_size >= source_file_size) {
             reduced = false;
             destination_bar_colour = negative;
@@ -106,11 +106,11 @@ var CompletedTasksFileSizeDiffChart = function () {
     };
 
 
-    var updateTotalChart = function () {
+    const updateTotalChart = function () {
         // If the destination file size is greater than the source, then mark it negative, otherwise positive
-        var reduced = true;
-        var destination_bar_colour = positive;
-        var percent_changed = 100 - (destination_total_size / source_total_size * 100);
+        let reduced = true;
+        let destination_bar_colour = positive;
+        let percent_changed = 100 - (destination_total_size / source_total_size * 100);
         if (destination_total_size >= source_total_size) {
             reduced = false;
             destination_bar_colour = negative;
@@ -153,25 +153,27 @@ var CompletedTasksFileSizeDiffChart = function () {
         }
     };
 
-    var fetchConversionDetails = function (taskId) {
+    const fetchConversionDetails = function (taskId) {
         jQuery.get('conversionDetails/?task_id=' + taskId, function (data) {
             // Update/set the conversion details list
+            let source_abspath = '';
             for (let i = 0; i < data.length; i++) {
                 let item = data[i];
                 if (item.type === 'source') {
-                    chart_title = item.basename;
                     source_file_size = Number(item.size);
+                    source_abspath = item.abspath;
                 } else if (item.type === 'destination') {
+                    chart_title = item.basename;
                     destination_file_size = Number(item.size);
                 }
             }
             updateIndividualChart();
 
-            $('#selected_task_name').html(chart_title)
+            $('#selected_task_name').html(chart_title + '<br>(Original Source Path: "' + source_abspath + '")')
         });
     };
 
-    var fetchTotalFileSizeDetails = function () {
+    const fetchTotalFileSizeDetails = function () {
         jQuery.get('totalSizeChange', function (data) {
             // Update/set the conversion details list
             source_total_size = data.source;
@@ -180,8 +182,8 @@ var CompletedTasksFileSizeDiffChart = function () {
         });
     };
 
-    var watch = function () {
-        var selectedTaskId = $('#selected_task_id');
+    const watch = function () {
+        let selectedTaskId = $('#selected_task_id');
         selectedTaskId.on("change", function () {
             fetchConversionDetails(this.value)
         }).triggerHandler('change');

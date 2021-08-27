@@ -214,7 +214,4 @@ def render_frontend_panel(data):
     with open(os.path.abspath(os.path.join(os.path.dirname(__file__), 'static', 'index.html'))) as f:
         data['content'] = f.read()
 
-    from pprint import pprint
-    pprint(data)
-
     return data
