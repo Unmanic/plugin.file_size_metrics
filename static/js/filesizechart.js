@@ -190,7 +190,9 @@ const CompletedTasksFileSizeDiffChart = function () {
     const watch = function () {
         let selectedTaskId = $('#selected_task_id');
         selectedTaskId.on("change", function () {
-            fetchConversionDetails(this.value)
+            if (this.value !== '') {
+                fetchConversionDetails(this.value);
+            }
         }).triggerHandler('change');
     }
 
