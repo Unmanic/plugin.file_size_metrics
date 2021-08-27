@@ -21,6 +21,8 @@
         If not, see <https://www.gnu.org/licenses/>.
 
 """
+import datetime
+import os.path
 from operator import attrgetter
 
 from file_size_metrics.lib.database import Database, HistoricTasks, HistoricTaskProbe
@@ -181,3 +183,64 @@ class Data(object):
 
         # Return results
         return return_data
+
+    def save_source_item(self, abspath, size, task_success=False):
+        basename = os.path.basename(abspath)
+        task_label = basename
+        start_time = datetime.datetime.now()
+        finish_time = None
+
+        db = Database.db()
+        with db.atomic() as transaction:
+            try:
+                new_historic_task = HistoricTasks.create(
+                    task_label=task_label,
+                    task_success=task_success,
+                    start_time=start_time,
+                    finish_time=finish_time
+                )
+                # Create probe entry for source item
+                HistoricTaskProbe.create(
+                    historictask_id=new_historic_task,
+                    type='source',
+                    abspath=abspath,
+                    basename=basename,
+                    size=size
+                )
+                task_id = new_historic_task.id
+            except Exception:
+                transaction.rollback()
+                task_id = None
+                self.logger.exception("Failed to save historic data to database.")
+        return task_id
+
+    def save_destination_item(self, task_id, abspath, size):
+        basename = os.path.basename(abspath)
+        db = Database.db()
+        with db.atomic() as transaction:
+            try:
+                # Create probe entry for source item
+                HistoricTaskProbe.create(
+                    historictask_id=task_id,
+                    type='destination',
+                    abspath=abspath,
+                    basename=basename,
+                    size=size
+                )
+            except Exception:
+                transaction.rollback()
+                self.logger.exception("Failed to save historic data to database.")
+                return False
+
+        # Update the original entry
+        with db.atomic() as transaction:
+            try:
+                historic_task, created = HistoricTasks.get_or_create(id=task_id)
+                historic_task.finish_time = datetime.datetime.now()
+                historic_task.task_success = True
+                historic_task.save()
+            except Exception:
+                transaction.rollback()
+                self.logger.exception("Failed to save historic data to database.")
+                return False
+        return True

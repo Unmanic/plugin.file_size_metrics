@@ -57,7 +57,7 @@ class HistoricTasks(BaseModel):
     task_label = TextField(null=False, default='UNKNOWN')
     task_success = BooleanField(null=False, default='UNKNOWN')
     start_time = DateTimeField(null=False, default=datetime.datetime.now)
-    finish_time = DateTimeField(null=False, default=datetime.datetime.now)
+    finish_time = DateTimeField(null=True)
 
 
 class HistoricTaskProbe(BaseModel):
@@ -95,6 +95,10 @@ class Database(object):
         if not db.is_closed():
             db.close()
 
+    @staticmethod
+    def db():
+        return db
+
     def get_legacy_db_file(self):
         profile_directory = self.settings.get_plugin_directory()
         return os.path.abspath(os.path.join(profile_directory, '..', '..', 'config', 'unmanic.db'))
@@ -107,7 +111,8 @@ class Database(object):
         new_db_file = self.get_db_file()
         # Create required tables in new DB
         db_connection = Database.select_database(new_db_file)
-        db_connection.create_tables([HistoricTasks, HistoricTaskProbe])
+        db_connection.connect()
+        db_connection.create_tables([HistoricTasks, HistoricTaskProbe], safe=True)
         db_connection.close()
 
     def migrate_data(self):
@@ -122,9 +127,9 @@ class Database(object):
         # Create required tables in new DB
         self.create_db_schema()
 
+        # Fetch data from old database (if data exists)
+        db_connection = Database.select_database(legacy_db_file)
         try:
-            # Fetch data from old database (if data exists)
-            db_connection = Database.select_database(legacy_db_file)
             query = (
                 HistoricTasks.select(HistoricTasks.id, HistoricTasks.task_label, HistoricTasks.task_success,
                                      HistoricTaskProbe.type, HistoricTaskProbe.abspath,
@@ -144,8 +149,16 @@ class Database(object):
                 historic_tasks_to_migrate.append(record)
             # Close connection
             db_connection.close()
+        except Exception:
+            # No historic entries exist yet
+            self.logger.exception("Failed to import old historic data.")
+            # Close connection
+            db_connection.close()
+            return
 
-            db_connection = Database.select_database(new_db_file)
+        # Add old data to new DB
+        db_connection = Database.select_database(new_db_file)
+        try:
             for record in historic_tasks_to_migrate:
                 # Add historic record to new DB
                 historic_task, created = HistoricTasks.get_or_create(id=record.id)
@@ -167,3 +180,5 @@ class Database(object):
         except Exception:
             # No historic entries exist yet
             self.logger.exception("Failed to migrate old historic data.")
+            # Close connection
+            db_connection.close()
