@@ -23,6 +23,7 @@ import hashlib
 import json
 import logging
 import os
+import uuid
 
 from unmanic.libs.unplugins.settings import PluginSettings
 
@@ -212,6 +213,7 @@ def render_frontend_panel(data):
         return
 
     with open(os.path.abspath(os.path.join(os.path.dirname(__file__), 'static', 'index.html'))) as f:
-        data['content'] = f.read()
+        content = f.read()
+        data['content'] = content.replace("{cache_buster}", str(uuid.uuid4()))
 
     return data
