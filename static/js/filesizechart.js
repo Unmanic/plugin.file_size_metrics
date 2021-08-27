@@ -157,6 +157,7 @@ const CompletedTasksFileSizeDiffChart = function () {
         jQuery.get('conversionDetails/?task_id=' + taskId, function (data) {
             // Update/set the conversion details list
             let source_abspath = '';
+            let destination_abspath = '';
             for (let i = 0; i < data.length; i++) {
                 let item = data[i];
                 if (item.type === 'source') {
@@ -165,11 +166,15 @@ const CompletedTasksFileSizeDiffChart = function () {
                 } else if (item.type === 'destination') {
                     chart_title = item.basename;
                     destination_file_size = Number(item.size);
+                    destination_abspath = item.abspath;
                 }
             }
             updateIndividualChart();
 
-            $('#selected_task_name').html(chart_title + '<br>(Original Source Path: "' + source_abspath + '")')
+            let html = 'Original File Path: "' + source_abspath + '"'
+            html += '<br>'
+            html += 'New File Path: "' + destination_abspath + '"'
+            $('#selected_task_name').html(html)
         });
     };
 
