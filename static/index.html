@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>File Size Metrics | Unmanic</title>
+    <link rel="shortcut icon" href="static/favicon.ico">
+
+    <link rel="stylesheet" type="text/css" href="./static/vendor/datatables/media/css/jquery.dataTables.min.css ">
+
+    <style>
+        .hidden {
+            display: none;
+        }
+
+        table.dataTable td {
+            word-break: break-word;
+        }
+
+
+        * {
+            box-sizing: border-box;
+        }
+
+        /* Float four columns side by side */
+        .column {
+            float: left;
+            width: 50%;
+            padding: 0 10px;
+        }
+
+        /* Remove extra left and right margins, due to padding */
+        .row {
+            margin: 0 -5px;
+        }
+
+        /* Clear floats after the columns */
+        .row:after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+
+        /* Responsive columns */
+        @media screen and (max-width: 600px) {
+            .column {
+                width: 100%;
+                display: block;
+                margin-bottom: 20px;
+            }
+        }
+
+        /*Cards*/
+        .card {
+            box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+            /*padding: 16px;*/
+            text-align: center;
+            background-color: #ffffff;
+        }
+
+        .collapsible {
+            background-color: #777;
+            color: white;
+            cursor: pointer;
+            padding: 18px;
+            width: 100%;
+            border: none;
+            text-align: left;
+            outline: none;
+            font-size: 15px;
+        }
+
+        button.collapsible::after {
+            content: "\2212";
+            color: white;
+            font-weight: bold;
+            float: right;
+            margin-left: 5px;
+
+        }
+
+        button.collapsible.active::after {
+            content: '\002B';
+        }
+
+        .active, .collapsible:hover {
+            background-color: #555;
+        }
+
+        .content {
+            padding: 0 18px;
+            display: none;
+            overflow: hidden;
+            background-color: #ffffff;
+        }
+
+        /*Custom*/
+        .car-header {
+            display: block;
+            min-height: 40px;
+        }
+
+        .view-btn {
+            background-color: #009fdd !important;
+            border-radius: 5px;
+            font-size: 17px;
+            font-family: 'Source Sans Pro', sans-serif;
+            padding: 6px 18px;
+            color: #FFFFFF;
+            border: none;
+            display: inline-block;
+            vertical-align: middle;
+            overflow: hidden;
+            text-decoration: none;
+            text-align: center;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+    </style>
+
+</head>
+<body>
+
+<!-- ######## BEGIN PAGE CONTENT -->
+
+<div class="page-content" style="padding-top:30px">
+
+    <!--<div class="row">
+        <div class="col-md-12 col-sm-12">
+
+            <div class="table-container">
+                <div class="table-actions-wrapper">
+                    <span> </span>
+
+                    <div class="actions pull-right">
+                        <div class="btn-group">
+                            <a class="btn btn-default btn-sm" href="javascript:;" data-toggle="dropdown">
+                                <i class="fa fa-check-square-o"></i> Options
+                                <i class="fa fa-angle-down"></i>
+                            </a>
+                            <ul class="dropdown-menu pull-right">
+                                <li>
+                                    <a href="javascript:;" class="add-to-pending">
+                                        <i class="fa fa-pencil"></i> Add Selected to Pending Tasks List </a>
+                                </li>
+                                <li class="divider"></li>
+                                <li>
+                                    <a href="javascript:;" class="delete-from-history">
+                                        <i class="fa fa-trash-o"></i> Delete Selected </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class='table-responsive'>
+                    <table class="table table-striped table-bordered table-hover table-checkable order-column nowrap"
+                           id="history_completed_tasks_table">
+                        <thead>
+                        <tr>
+                            <th class="table-checkbox ">
+                                <input type="checkbox" id="checkbox_header" class="md-check group-checkable"
+                                       data-set="#history_completed_tasks_table .checkboxes"/>
+                            </th>
+                            <th>Name</th>
+                            <th>Completed</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        &lt;!&ndash; Content dynamically generated via the datatable library &ndash;&gt;
+                        </tbody>
+                    </table>
+
+                </div>
+            </div>
+
+        </div>
+    </div>-->
+
+
+    <div class="row">
+
+        <div class="column">
+            <div class="card">
+                <div class="card-content">
+                    <button type="button" class="collapsible">
+                        <span id="selected_task_name" class="car-header">(Select a task from the table below)</span>
+                    </button>
+                    <div class="content" style="display:block;">
+                        <input id="selected_task_id" type="hidden" name="selected_task_id" value=""/>
+                        <div id="task_details">
+                            <div id="file_size_chart">
+                                There was an issue showing this chart
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="column">
+            <div class="card">
+                <div class="card-content">
+                    <button type="button" class="collapsible">
+                        <span class="car-header">Total File Size Changed</span>
+                    </button>
+                    <div class="content" style="display:block;">
+                        <div id="total_size_chart">
+                            There was an issue showing this chart
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <hr>
+
+    <table id="history_completed_tasks_table" class="dataTable" style="width:100%">
+        <thead>
+        <tr>
+            <!--Headers are overwritten in JS datatable config-->
+            <th>Name</th>
+            <th>Started</th>
+            <th>Completed</th>
+            <th>Status</th>
+            <th>Action</th>
+        </tr>
+        </thead>
+        <tfoot>
+        <tr>
+            <!--Headers are overwritten in JS datatable config-->
+            <th>Name</th>
+            <th>Started</th>
+            <th>Completed</th>
+            <th>Status</th>
+            <th>Action</th>
+        </tr>
+        </tfoot>
+    </table>
+
+</div>
+
+<!-- ######## END PAGE CONTENT -->
+
+
+<!-- ######## BEGIN SCRIPTS -->
+
+<script type="text/javascript" src="./static/vendor/jquery/dist/jquery.min.js"></script>
+
+<!--DATATABLE-->
+<script type="text/javascript" src="./static/vendor/datatables/media/js/jquery.dataTables.min.js"></script>
+
+<!--CHARTS-->
+<script type="text/javascript" src="./static/vendor/highcharts/highcharts.js"></script>
+<script type="text/javascript" src="./static/vendor/highcharts/highcharts-3d.js"></script>
+<script type="text/javascript" src="./static/vendor/highcharts/highcharts-more.js"></script>
+<script>
+    var coll = document.getElementsByClassName("collapsible");
+    var i;
+
+    for (i = 0; i < coll.length; i++) {
+        coll[i].addEventListener("click", function () {
+            console.log('here')
+            this.classList.toggle("active");
+            var content = this.nextElementSibling;
+            if (content.style.display === "block") {
+                content.style.display = "none";
+            } else {
+                content.style.display = "block";
+            }
+        });
+    }
+</script>
+
+<script type="text/javascript" src="./static/js/table.js"></script>
+
+<script type="text/javascript" src="./static/js/filesizechart.js"></script>
+
+<script>
+    window.onload = function funLoad() {
+        CompletedTasksDatatable.init();
+        CompletedTasksFileSizeDiffChart.init();
+    }
+</script>
+
+<!-- ######## END SCRIPTS -->
+
+</body>
+</html>
