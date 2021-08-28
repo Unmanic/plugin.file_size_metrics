@@ -131,9 +131,18 @@ class Database(object):
         db_connection = Database.select_database(legacy_db_file)
         try:
             query = (
-                HistoricTasks.select(HistoricTasks.id, HistoricTasks.task_label, HistoricTasks.task_success,
-                                     HistoricTaskProbe.type, HistoricTaskProbe.abspath,
-                                     HistoricTaskProbe.basename, HistoricTaskProbe.size))
+                HistoricTasks.select(
+                    HistoricTasks.id,
+                    HistoricTasks.task_label,
+                    HistoricTasks.task_success,
+                    HistoricTasks.start_time,
+                    HistoricTasks.finish_time,
+                    HistoricTaskProbe.type,
+                    HistoricTaskProbe.abspath,
+                    HistoricTaskProbe.basename,
+                    HistoricTaskProbe.size
+                )
+            )
             predicate = (
                     (HistoricTaskProbe.historictask_id == HistoricTasks.id) &
                     (
@@ -164,6 +173,8 @@ class Database(object):
                 historic_task, created = HistoricTasks.get_or_create(id=record.id)
                 historic_task.task_label = record.task_label
                 historic_task.task_success = record.task_success
+                historic_task.start_time = datetime.datetime.fromtimestamp(record.start_time)
+                historic_task.finish_time = datetime.datetime.fromtimestamp(record.finish_time)
                 historic_task.save()
 
                 # Create probe entries
