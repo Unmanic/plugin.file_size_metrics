@@ -108,13 +108,13 @@ const CompletedTasksFileSizeDiffChart = function () {
 
     const updateTotalChart = function () {
         // If the destination file size is greater than the source, then mark it negative, otherwise positive
-        let reduced = true;
+        let change_text = 'decrease';
         let destination_bar_colour = positive;
-        let percent_changed = 100 - (destination_total_size / source_total_size * 100);
-        if (destination_total_size >= source_total_size) {
-            reduced = false;
+        let difference_in_total_file_sizes = (source_total_size - destination_total_size)
+        if (destination_total_size > source_total_size) {
+            change_text = 'increase';
             destination_bar_colour = negative;
-            percent_changed = 100 - (source_total_size / destination_total_size * 100);
+            difference_in_total_file_sizes = (destination_total_size - source_total_size)
         }
         source_total_size = Number(source_total_size)
         destination_total_size = Number(destination_total_size)
@@ -125,7 +125,7 @@ const CompletedTasksFileSizeDiffChart = function () {
                 width: null
             },
             title: {
-                text: Highcharts.numberFormat(percent_changed, 2) + '% ' + ((reduced) ? 'decrease' : 'increase') + ' in total file size'
+                text: formatBytes(difference_in_total_file_sizes) + ' total ' + change_text + ' in file size'
             },
             colors: ['#555555', destination_bar_colour],
             tooltip: {
