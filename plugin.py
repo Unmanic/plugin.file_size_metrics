@@ -523,17 +523,17 @@ def on_postprocessor_task_results(data):
 
 
 def render_frontend_panel(data):
-    if data.get('path') in ['list', '/list', '/list/', '/list/']:
+    if data.get('path') in ['list', '/list', '/list/']:
         data['content_type'] = 'application/json'
         data['content'] = get_historical_data(data)
         return
 
-    if data.get('path') in ['conversionDetails', '/conversionDetails', '/conversionDetails/', '/conversionDetails/']:
+    if data.get('path') in ['conversionDetails', '/conversionDetails', '/conversionDetails/']:
         data['content_type'] = 'application/json'
         data['content'] = get_historical_data_details(data)
         return
 
-    if data.get('path') in ['totalSizeChange', '/totalSizeChange', '/totalSizeChange/', '/totalSizeChange/']:
+    if data.get('path') in ['totalSizeChange', '/totalSizeChange', '/totalSizeChange/']:
         data['content_type'] = 'application/json'
         data['content'] = get_total_size_change_data_details(data)
         return
