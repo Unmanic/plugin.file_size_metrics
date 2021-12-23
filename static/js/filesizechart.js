@@ -3,15 +3,20 @@ const CompletedTasksFileSizeDiffChart = function () {
     /**
      * Format a byte integer into the smallest possible number appending a suffix
      *
+     * REF:
+     *  https://stackoverflow.com/questions/15900485/correct-way-to-convert-size-in-bytes-to-kb-mb-gb-in-javascript
+     *
      * @param bytes
      * @param decimals
      * @returns {string}
      */
-    const formatBytes = function (bytes, decimals) {
-        decimals = (typeof decimals !== 'undefined') ? decimals : 2;
+    const formatBytes = function (bytes) {
         if (bytes === 0) return '0 Bytes';
-        let k = 1024;
-        let dm = decimals < 0 ? 0 : decimals;
+        // Rather than using `let k = 1024;` (base 2) use `let k = 1000;` (base 10)
+        // This way the end result will better fit in with the high chart logic
+        // Using Base 2 will lead to the chart sections showing a rounded number and the bar showing something different
+        let k = 1000;
+        let dm = 2
         let sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
         let i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
