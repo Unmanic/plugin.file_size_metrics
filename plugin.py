@@ -490,17 +490,20 @@ def on_postprocessor_task_results(data):
     # Read the data from the on_worker_process runner
     settings = Settings()
     profile_directory = settings.get_profile_directory()
-    # Get the file out and store
+
+    # Get the file out and store (if it exists)
     src_file_hash = hashlib.md5(original_source_path.encode('utf8')).hexdigest()
     plugin_data_file = os.path.join(profile_directory, '{}.json'.format(src_file_hash))
-    if not os.path.exists(plugin_data_file):
-        logger.error("Plugin data file is missing.")
-        raise Exception("Plugin data file is missing.")
-    with open(plugin_data_file) as infile:
-        task_metadata = json.load(infile)
+    if os.path.exists(plugin_data_file):
+        # The store exists
+        with open(plugin_data_file) as infile:
+            task_metadata = json.load(infile)
+        source_size = task_metadata.get('source_size')
+    else:
+        # The store did not exist, resort to fetching the data from the original source file (hopefully unchanged)
+        logger.warning("Plugin data file is missing. Fetching source size direct from source path.")
+        source_size = os.path.getsize(data.get('source_data', {}).get('abspath'))
 
-    # Store the source size metric in the DB
-    source_size = task_metadata.get('source_size')
     if not source_size:
         logger.error("Plugin data file is missing 'source_size'.")
         return data

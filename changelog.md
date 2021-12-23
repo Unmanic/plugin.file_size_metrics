@@ -1,6 +1,7 @@
 
 **<span style="color:#56adda">0.0.7</span>**
 - Fix issue with number formatting
+- Add support for parsing data for tasks processed with remote workers
 
 **<span style="color:#56adda">0.0.6</span>**
 - Remove migrations of legacy Unmanic historic data as it still causes intermittent issues
