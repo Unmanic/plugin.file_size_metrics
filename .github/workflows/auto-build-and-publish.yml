@@ -1,0 +1,37 @@
+name: Automatically build and publish this plugin
+
+on:
+  push:
+    branches:
+      - 'master'
+
+jobs:
+
+  build-and-publish-plugin:
+    runs-on: ubuntu-latest
+    name: Build and publish plugin
+    steps:
+
+    # Execute plugin repo gen action
+    - name: Build and publish plugin
+      uses: Unmanic/action.build-and-publish-unmanic-plugin@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  generate-pr-in-official-repo:
+    runs-on: ubuntu-latest
+    name: Generate PR for official repo
+    permissions:
+      contents: write
+      actions: write
+      pull-requests: write
+    steps:
+
+    # Execute PR generation action
+    - name: Generate PR for official repo
+      uses: Unmanic/action.open-pr-to-unmanic-repo@master
+      with:
+        dst_repo: Unmanic/unmanic-plugins
+        pr_repo: Unmanic/unmanic-plugins
+        pr_repo_branch_name: official
+        github_token: ${{ secrets.GH_TOKEN }}
