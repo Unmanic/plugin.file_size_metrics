@@ -1,3 +1,7 @@
+**<span style="color:#56adda">0.2.0</span>**
+- Use new plugin runners to improve data collection (requires Unmanic v0.3.0 or higher)
+- Send Unmanic data logs for each post-processed file containing the file size changes (requires Unmanic v0.3.0 or higher)
+
 **<span style="color:#56adda">0.1.1</span>**
 - When viewing on mobile, show individual file metrics in a dialog popup
 

@@ -19,9 +19,7 @@
         If not, see <https://www.gnu.org/licenses/>.
 
 """
-import hashlib
 import json
-import logging
 import os
 import uuid
 import datetime
@@ -31,10 +29,11 @@ from peewee import *
 from playhouse.shortcuts import model_to_dict
 from playhouse.sqliteq import SqliteQueueDatabase
 
+from unmanic.libs.logs import UnmanicLogging
 from unmanic.libs.unplugins.settings import PluginSettings
 
 # Configure plugin logger
-logger = logging.getLogger("Unmanic.Plugin.file_size_metrics")
+logger = UnmanicLogging.get_logger(name='Unmanic.Plugin.file_size_metrics')
 
 
 class Settings(PluginSettings):
@@ -140,10 +139,10 @@ class Data(object):
                 query = query.where(HistoricTasks.task_label.contains(search_value))
 
             predicate = (
-                    (HistoricTaskProbe.historictask_id == HistoricTasks.id) &
-                    (
-                        (HistoricTaskProbe.type == "destination")
-                    )
+                (HistoricTaskProbe.historictask_id == HistoricTasks.id) &
+                (
+                    (HistoricTaskProbe.type == "destination")
+                )
             )
 
             query = query.join(HistoricTasks, on=predicate)
@@ -223,7 +222,7 @@ class Data(object):
             (HistoricTaskProbe.type == 'source') & (HistoricTasks.task_success)
         )
         predicate = (
-                HistoricTaskProbe.historictask_id == HistoricTasks.id
+            HistoricTaskProbe.historictask_id == HistoricTasks.id
         )
         source_query = source_query.join(HistoricTasks, on=predicate)
 
@@ -235,7 +234,7 @@ class Data(object):
             (HistoricTaskProbe.type == 'destination') & (HistoricTasks.task_success)
         )
         predicate = (
-                HistoricTaskProbe.historictask_id == HistoricTasks.id
+            HistoricTaskProbe.historictask_id == HistoricTasks.id
         )
         destination_query = destination_query.join(HistoricTasks, on=predicate)
 
@@ -346,7 +345,7 @@ class Data(object):
         self.db_stop()
         return task_id
 
-    def save_destination_item(self, task_id, abspath, size):
+    def save_destination_item(self, task_id, abspath, size, finish_time):
         self.db_start()
 
         basename = os.path.basename(abspath)
@@ -367,7 +366,7 @@ class Data(object):
         # Update the original entry
         try:
             historic_task, created = HistoricTasks.get_or_create(id=task_id)
-            historic_task.finish_time = datetime.datetime.now()
+            historic_task.finish_time = finish_time
             historic_task.task_success = True
             historic_task.save()
         except Exception:
@@ -415,120 +414,132 @@ def get_total_size_change_data_details(data):
 def save_source_details(abspath, size, start_time=None):
     # Return a list of historical tasks based on the request JSON body
     data = Data()
-    task_id = data.save_source_item(abspath, size, start_time)
+    task_id = data.save_source_item(abspath, size, start_time=start_time)
 
     return task_id
 
 
-def save_destination_size(task_id, abspath, size):
+def save_destination_size(task_id, abspath, size, finish_time):
     # Return a list of historical tasks based on the request JSON body
     data = Data()
-    success = data.save_destination_item(task_id, abspath, size)
+    success = data.save_destination_item(task_id, abspath, size, finish_time)
 
     return success
 
 
-def on_worker_process(data):
+def emit_task_scheduled(data, store):
     """
-    Runner function - enables additional configured processing jobs during the worker stages of a task.
+    Runner function - emit data when a task is scheduled for execution on a worker.
 
     The 'data' object argument includes:
-        exec_command            - A command that Unmanic should execute. Can be empty.
-        command_progress_parser - A function that Unmanic can use to parse the STDOUT of the command to collect progress stats. Can be empty.
-        file_in                 - The source file to be processed by the command.
-        file_out                - The destination that the command should output (may be the same as the file_in if necessary).
-        original_file_path      - The absolute path to the original file.
-        repeat                  - Boolean, should this runner be executed again once completed with the same variables.
+        library_id                - Integer, the ID of the library.
+        task_id                   - Integer, unique identifier of the task.
+        task_type                 - String, "local" or "remote". Indicates how this task is going to be processed.
+        task_schedule_type        - String, either "local" or "remote". Where are we scheduling this task?
+        remote_installation_info  - Dict, for remote tasks contains:
+                                      - uuid:    String, the installation UUID.
+                                      - address: String, the remote worker address.
+                                    Empty dict for local tasks.
+        source_data               - Dict, details of the task being scheduled:
+                                      - abspath: String, absolute path to the file.
+                                      - basename: String, file name.
 
+    :param store:
     :param data:
     :return:
 
     """
+    if data.get("task_type") == "remote":
+        # This plugin will only run for tasks on the main installation. Remote tasks are duplicates created on remote installations.
+        return
+
     # Get the path to the file
-    abspath = data.get('original_file_path')
+    abspath = data.get('source_data', {})["abspath"]
     source_size = os.path.getsize(abspath)
 
-    # Store size metric in file for now...
-    # The DB should only be updated by a single thread. The workers are multi-threaded.
-    profile_directory = settings.get_profile_directory()
-    # Use the basename of the source path to create a unique file for storing the file_out data.
-    # This can then be read and used by the on_postprocessor_task_results function below.
-    src_file_hash = hashlib.md5(abspath.encode('utf8')).hexdigest()
-    plugin_data_file = os.path.join(profile_directory, '{}.json'.format(src_file_hash))
-
-    with open(plugin_data_file, 'w') as f:
-        required_data = {
-            'file_in': data.get('file_in'),
-            'original_file_path': data.get('original_file_path'),
-            'source_size': source_size,
-            'start_time': datetime.datetime.now().isoformat(),
-        }
-        json.dump(required_data, f, indent=4)
-
-    return data
+    # Store this data in the shared state
+    store.set_runner_value("source_size", source_size)
 
 
-def on_postprocessor_task_results(data):
+def on_postprocessor_task_results(data, store):
     """
     Runner function - provides a means for additional postprocessor functions based on the task success.
 
     The 'data' object argument includes:
+        library_id                      - The library that the current task is associated with.
+        task_id                         - Integer, unique identifier of the task.
+        task_type                       - String, "local" or "remote".
+        final_cache_path                - The path to the final cache file that was then used as the source for all destination files.
         task_processing_success         - Boolean, did all task processes complete successfully.
         file_move_processes_success     - Boolean, did all postprocessor movement tasks complete successfully.
         destination_files               - List containing all file paths created by postprocessor file movements.
         source_data                     - Dictionary containing data pertaining to the original source file.
+        start_time                      - Float, UNIX timestamp when the task began.
+        finish_time                     - Float, UNIX timestamp when the task completed.
 
+    :param store:
     :param data:
     :return:
 
     """
+
     # Get the original file's absolute path
     original_source_path = data.get('source_data', {}).get('abspath')
     if not original_source_path:
         logger.error("Provided 'source_data' is missing the source file abspath data.")
-        return data
+        return
 
-    # Read the data from the on_worker_process runner
-    profile_directory = settings.get_profile_directory()
+    # Read start/finish times from provided data
+    unix_start_time = data.get('start_time')
+    if not unix_start_time:
+        logger.error("The 'start_time' is missing the data.")
+        return
+    start_time = datetime.datetime.fromtimestamp(unix_start_time)
+    unix_finish_time = data.get('finish_time')
+    if not unix_start_time:
+        logger.error("The 'finish_time' is missing the data.")
+        return
+    finish_time = datetime.datetime.fromtimestamp(unix_finish_time)
 
-    # Get the file out and store (if it exists)
-    src_file_hash = hashlib.md5(original_source_path.encode('utf8')).hexdigest()
-    plugin_data_file = os.path.join(profile_directory, '{}.json'.format(src_file_hash))
-    start_time = None
-
-    if os.path.exists(plugin_data_file):
-        # The store exists
-        with open(plugin_data_file) as infile:
-            task_metadata = json.load(infile)
-
-        source_size = task_metadata.get('source_size')
-        start_time = datetime.datetime.fromisoformat(task_metadata.get('start_time')) if 'start_time' in task_metadata else datetime.datetime.now()
-    else:
-        # The store did not exist, resort to fetching the data from the original source file (hopefully unchanged)
-        logger.warning("Plugin data file is missing. Fetching source size direct from source path.")
-        source_size = os.path.getsize(data.get('source_data', {}).get('abspath'))
-
-    if not source_size:
-        logger.error("Plugin data file is missing 'source_size'.")
-        return data
-
-    task_id = save_source_details(original_source_path, source_size, start_time)
-
-    if task_id is None:
-        logger.error("Failed to create source size entry for this file")
-        return data
+    # Read source_size from data store
+    source_size = store.get_runner_value("source_size", runner="emit_task_scheduled")
+    if source_size is None:
+        # Something is going wrong here. The data is no longer in the store.
+        logger.error("The 'source_size' is missing from the task data store.")
 
     # For each of the destination files, write a file size metric entry
+    dest_abspath = None
+    dest_size = None
     for dest_file in data.get('destination_files', []):
-        abspath = os.path.abspath(dest_file)
+        dest_abspath = os.path.abspath(dest_file)
         # Add a destination file entry if the file actually exists
-        if os.path.exists(abspath):
-            size = os.path.getsize(abspath)
-            save_destination_size(task_id, abspath, size)
+        if os.path.exists(dest_abspath):
+            dest_size = os.path.getsize(dest_abspath)
         else:
-            logger.info("Skipping file '{}' as it does not exist.".format(abspath))
+            logger.info("Skipping file '{}' as it does not exist.".format(dest_abspath))
 
-    return data
+    if dest_abspath is None or dest_size is None:
+        logger.error("Failed to get the file size of the destination file.")
+        return
+
+    size_difference = dest_size - source_size
+    processing_duration = str((start_time - finish_time))
+    data_search_key = f"{data.get('task_id')} | {data.get('library_id')} | {original_source_path}"
+    UnmanicLogging.data("file_size_metrics",
+                        data_search_key=data_search_key,
+                        source_abspath=original_source_path,
+                        dest_abspath=dest_abspath,
+                        source_size=source_size,
+                        dest_size=dest_size,
+                        size_difference=size_difference,
+                        start_time=start_time,
+                        finish_time=finish_time,
+                        processing_duration=processing_duration)
+
+    task_id = save_source_details(original_source_path, source_size, start_time)
+    if task_id is None:
+        logger.error("Failed to create source size entry for this file")
+    save_destination_size(task_id, dest_abspath, dest_size, finish_time)
 
 
 def render_frontend_panel(data):
