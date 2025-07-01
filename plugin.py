@@ -139,10 +139,10 @@ class Data(object):
                 query = query.where(HistoricTasks.task_label.contains(search_value))
 
             predicate = (
-                (HistoricTaskProbe.historictask_id == HistoricTasks.id) &
-                (
-                    (HistoricTaskProbe.type == "destination")
-                )
+                    (HistoricTaskProbe.historictask_id == HistoricTasks.id) &
+                    (
+                        (HistoricTaskProbe.type == "destination")
+                    )
             )
 
             query = query.join(HistoricTasks, on=predicate)
@@ -222,7 +222,7 @@ class Data(object):
             (HistoricTaskProbe.type == 'source') & (HistoricTasks.task_success)
         )
         predicate = (
-            HistoricTaskProbe.historictask_id == HistoricTasks.id
+                HistoricTaskProbe.historictask_id == HistoricTasks.id
         )
         source_query = source_query.join(HistoricTasks, on=predicate)
 
@@ -234,7 +234,7 @@ class Data(object):
             (HistoricTaskProbe.type == 'destination') & (HistoricTasks.task_success)
         )
         predicate = (
-            HistoricTaskProbe.historictask_id == HistoricTasks.id
+                HistoricTaskProbe.historictask_id == HistoricTasks.id
         )
         destination_query = destination_query.join(HistoricTasks, on=predicate)
 
@@ -523,7 +523,7 @@ def on_postprocessor_task_results(data, store):
         return
 
     size_difference = dest_size - source_size
-    processing_duration = str((start_time - finish_time))
+    processing_duration = unix_finish_time - unix_start_time
     data_search_key = f"{data.get('task_id')} | {data.get('library_id')} | {original_source_path}"
     UnmanicLogging.data("file_size_metrics",
                         data_search_key=data_search_key,
