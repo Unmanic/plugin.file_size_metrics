@@ -172,7 +172,7 @@ html {
 }
 
 .basename .name {
-  text-decoration: underline dashed;
+  text-decoration: none;
 }
 
 /* Responsive columns */
