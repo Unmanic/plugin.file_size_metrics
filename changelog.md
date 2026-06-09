@@ -1,3 +1,7 @@
+**<span style="color:#56adda">0.2.2</span>**
+- Store new metric timestamps in UTC and emit UTC-safe timing data to Unmanic Central
+- Return timestamp values to the standalone panel and format them in the viewer's browser timezone
+
 **<span style="color:#56adda">0.2.1</span>**
 - Fix the data panel database connection handling and empty-state responses to avoid frontend JSON errors
 - Refresh the standalone panel layout, notices, and mobile dialog behaviour

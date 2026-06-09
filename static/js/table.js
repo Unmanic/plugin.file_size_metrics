@@ -9,6 +9,31 @@ const panelState = {
   isAssigned: false,
 };
 
+const formatLocalDateTime = (timestamp) => {
+  const numericTimestamp = Number(timestamp);
+  if (!Number.isFinite(numericTimestamp) || numericTimestamp <= 0) {
+    return "";
+  }
+
+  const date = new Date(numericTimestamp * 1000);
+  const parts = new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+
+  const lookup = {};
+  parts.forEach((part) => {
+    lookup[part.type] = part.value;
+  });
+
+  return `${lookup.year}-${lookup.month}-${lookup.day} ${lookup.hour}:${lookup.minute}:${lookup.second}`;
+};
+
 const setMetricsPanelState = ({ hasData, isAssigned, message } = {}) => {
   const notice = document.getElementById("panelNotice");
   const noticeTitle = document.getElementById("panelNoticeTitle");
@@ -115,12 +140,14 @@ const CompletedTasksDatatable = (function () {
           title: "Start Time",
           name: "start_time",
           data: "start_time",
+          render: (value) => formatLocalDateTime(value),
         },
         {
           targets: 2,
           title: "Finish Time",
           name: "finish_time",
           data: "finish_time",
+          render: (value) => formatLocalDateTime(value),
         },
       ],
       lengthMenu: [

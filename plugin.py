@@ -45,6 +45,59 @@ logger = UnmanicLogging.get_logger(name="Unmanic.Plugin.file_size_metrics")
 PLUGIN_ID = "file_size_metrics"
 
 
+def get_unix_timestamp(value):
+    if value in [None, ""]:
+        return None
+
+    if isinstance(value, (int, float)):
+        return float(value)
+
+    if isinstance(value, datetime.datetime):
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=datetime.timezone.utc)
+        return value.timestamp()
+
+    if isinstance(value, datetime.date):
+        value = datetime.datetime.combine(
+            value,
+            datetime.time.min,
+            tzinfo=datetime.timezone.utc,
+        )
+        return value.timestamp()
+
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            return None
+
+        try:
+            return float(stripped)
+        except ValueError:
+            pass
+
+        parse_formats = (
+            "%Y-%m-%d %H:%M:%S.%f",
+            "%Y-%m-%d %H:%M:%S",
+            "%Y-%m-%dT%H:%M:%S.%f",
+            "%Y-%m-%dT%H:%M:%S",
+            "%Y-%m-%d %H:%M",
+        )
+        for fmt in parse_formats:
+            try:
+                parsed = datetime.datetime.strptime(stripped, fmt)
+                parsed = parsed.replace(tzinfo=datetime.timezone.utc)
+                return parsed.timestamp()
+            except ValueError:
+                continue
+
+        try:
+            return datetime.datetime.fromisoformat(stripped).timestamp()
+        except ValueError:
+            return None
+
+    return None
+
+
 class Settings(PluginSettings):
     settings = {}
 
@@ -88,7 +141,10 @@ class HistoricTasks(BaseModel):
 
     task_label = TextField(null=False, default="UNKNOWN")
     task_success = BooleanField(null=False, default="UNKNOWN")
-    start_time = DateTimeField(null=False, default=datetime.datetime.now)
+    start_time = DateTimeField(
+        null=False,
+        default=lambda: datetime.datetime.now(datetime.timezone.utc),
+    )
     finish_time = DateTimeField(null=True)
 
 
@@ -365,12 +421,8 @@ class Data(object):
             }
 
             for task in task_results:
-                start_time = ""
-                if task.get("start_time"):
-                    start_time = task.get("start_time").strftime("%Y-%m-%d %H:%M:%S")
-                finish_time = ""
-                if task.get("finish_time"):
-                    finish_time = task.get("finish_time").strftime("%Y-%m-%d %H:%M:%S")
+                start_time = get_unix_timestamp(task.get("start_time"))
+                finish_time = get_unix_timestamp(task.get("finish_time"))
                 item = {
                     "id":           task.get("id"),
                     "basename":     task.get("basename"),
@@ -394,7 +446,11 @@ class Data(object):
 
         basename = os.path.basename(abspath)
         task_label = basename
-        start_time = start_time if start_time is not None else datetime.datetime.now()
+        start_time = (
+            start_time
+            if start_time is not None
+            else datetime.datetime.now(datetime.timezone.utc)
+        )
         finish_time = None
         try:
             new_historic_task = HistoricTasks.create(
@@ -634,12 +690,12 @@ def on_postprocessor_task_results(data, store):
     if not unix_start_time:
         logger.error("The 'start_time' is missing the data.")
         return
-    start_time = datetime.datetime.fromtimestamp(unix_start_time)
+    start_time = datetime.datetime.fromtimestamp(unix_start_time, tz=datetime.timezone.utc)
     unix_finish_time = data.get("finish_time")
     if not unix_finish_time:
         logger.error("The 'finish_time' is missing the data.")
         return
-    finish_time = datetime.datetime.fromtimestamp(unix_finish_time)
+    finish_time = datetime.datetime.fromtimestamp(unix_finish_time, tz=datetime.timezone.utc)
 
     # Read source_size from data store
     source_size = store.get_runner_value("source_size", runner="emit_task_scheduled")
@@ -675,8 +731,8 @@ def on_postprocessor_task_results(data, store):
         source_size=source_size,
         dest_size=dest_size,
         size_difference=size_difference,
-        start_time=start_time,
-        finish_time=finish_time,
+        start_time=unix_start_time,
+        finish_time=unix_finish_time,
         processing_duration=processing_duration,
     )
 
