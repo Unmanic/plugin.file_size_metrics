@@ -1,3 +1,8 @@
+**<span style="color:#56adda">0.2.1</span>**
+- Fix the data panel database connection handling and empty-state responses to avoid frontend JSON errors
+- Refresh the standalone panel layout, notices, and mobile dialog behaviour
+- Improve dark mode, chart theming, and small-screen panel spacing
+
 **<span style="color:#56adda">0.2.0</span>**
 - Use new plugin runners to improve data collection (requires Unmanic v0.3.0 or higher)
 - Send Unmanic data logs for each post-processed file containing the file size changes (requires Unmanic v0.3.0 or higher)
